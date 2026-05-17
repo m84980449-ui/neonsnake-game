@@ -146,10 +146,16 @@
     .combo-banner.stage-up {
       color: var(--warning);
       text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+      animation: bounce 0.5s infinite alternate;
     }
     .combo-banner.danger {
       color: #ef4444;
       text-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+    }
+
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-4px); }
     }
 
     /* Visual mobile-first controls */
@@ -288,7 +294,7 @@
     <div class="stage-box">Stage: <span id="stage-label">1</span></div>
   </div>
 
-  <div class="combo-banner" id="combo-banner">MEGA COMBO x3!</div>
+  <div class="combo-banner" id="combo-banner">STAGE 1 START! 🚀</div>
 
   <canvas id="game-canvas" width="360" height="360"></canvas>
 
@@ -314,7 +320,7 @@
       🐦 Share & Brag on Twitter
     </a>
 
-    <!-- Binance Affiliate monetisation loop (Claim 5 new lives instantly!) -->
+    <!-- Binance Affiliate monetisation loop -->
     <a href="https://www.binance.com/activity/referral-entry/CPA?ref=897067319&utm_source=neonsnake" target="_blank" onclick="reviveSnake()" class="revive-btn">
       ⚡ Continue with 5 New Lives!
     </a>
@@ -326,7 +332,7 @@
 </div>
 
 <script>
-  // Chiptune Audio Synth (dopamine sound feedback without assets!)
+  // Chiptune Audio Synth
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   function playSound(type) {
     const osc = audioCtx.createOscillator();
@@ -350,16 +356,16 @@
       osc.start();
       osc.stop(audioCtx.currentTime + 0.25);
     } else if (type === 'levelUp') {
-      // Fast arpeggio level up synth
+      // Epic Level Up Arpeggio
       const now = audioCtx.currentTime;
-      osc.frequency.setValueAtTime(523.25, now); // C5
-      osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
-      osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
-      osc.frequency.setValueAtTime(1046.50, now + 0.24); // C6
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.setValueAtTime(659.25, now + 0.08);
+      osc.frequency.setValueAtTime(783.99, now + 0.16);
+      osc.frequency.setValueAtTime(1046.50, now + 0.24);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
       osc.start();
-      osc.stop(now + 0.4);
+      osc.stop(now + 0.45);
     } else if (type === 'die') {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(300, audioCtx.currentTime);
@@ -381,7 +387,8 @@
 
   let lives = 5;
   let stage = 1;
-  let speed = 120; // ms per update
+  let baseSpeed = 220; // Starting speed is slow and friendly (220ms)!
+  let speed = baseSpeed;
 
   let snake = [
     { x: grid * 5, y: grid * 10 },
@@ -395,7 +402,50 @@
   let comboCount = 0;
   let comboTimer = null;
 
-  // Custom colors for progressive stages (Leveling up morphs colors!)
+  // Level Clear Fireworks particles ("Boom of Joy")
+  let particles = [];
+  function createFireworkExplosion() {
+    playSound('levelUp');
+    const colors = ['#ff007f', '#00f0ff', '#00ff88', '#f59e0b', '#ffffff'];
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        vx: (Math.random() - 0.5) * 8,
+        vy: (Math.random() - 0.5) * 8,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: 1,
+        size: Math.random() * 4 + 2
+      });
+    }
+  }
+
+  function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.alpha -= 0.02;
+      if (p.alpha <= 0) {
+        particles.splice(i, 1);
+      }
+    }
+  }
+
+  function drawParticles() {
+    particles.forEach(p => {
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.alpha;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1; // reset alpha
+    ctx.shadowBlur = 0;
+  }
+
   const stageFoodColors = ['#ff007f', '#00ff88', '#f59e0b', '#00f0ff', '#a855f7'];
 
   function getRandomFoodPos() {
@@ -412,14 +462,14 @@
     ctx.fillStyle = '#080c18';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw grid glow accent lines
+    // Draw grid lines
     ctx.strokeStyle = 'rgba(255,255,255,0.015)';
     for(let i=0; i<canvas.width; i+=grid) {
       ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
     }
 
-    // Draw progressive neon glowing Food
+    // Draw Food
     const foodColor = stageFoodColors[(stage - 1) % stageFoodColors.length];
     ctx.fillStyle = foodColor;
     ctx.shadowBlur = 15;
@@ -434,21 +484,26 @@
       ctx.shadowBlur = index === 0 ? 10 : 0;
       ctx.shadowColor = '#00f0ff';
       
-      // Rounded snake block
       ctx.beginPath();
       ctx.roundRect(part.x + 1, part.y + 1, grid - 2, grid - 2, 6);
       ctx.fill();
     });
-    ctx.shadowBlur = 0; // reset shadow
+    ctx.shadowBlur = 0;
+
+    // Draw Level-Up firework explosion particles
+    drawParticles();
   }
 
   function update() {
     if (isGameOver) return;
 
+    // Update fireworks particles frame
+    updateParticles();
+
     // Move head
     const head = { x: snake[0].x + dx, y: snake[0].y + dy };
     
-    // Boundary collision OR Self collision
+    // Boundary/Self collision check
     let hasCollided = false;
     if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
       hasCollided = true;
@@ -478,7 +533,7 @@
         const banner = document.getElementById('combo-banner');
         banner.innerText = `FAST COMBO x${comboCount}!`;
         banner.className = 'combo-banner active';
-        score += 5; // bonus pts
+        score += 5; // bonus points
       }
       comboTimer = setTimeout(() => {
         comboCount = 0;
@@ -487,8 +542,8 @@
 
       document.getElementById('score-label').innerText = score;
       
-      // Stage/Level Up System (Every 5 apples / 50 pts)
-      if (score > 0 && score % 50 === 0) {
+      // STAGE UP MECHANICS: 1000 points per stage (100 apples)
+      if (score > 0 && score % 1000 === 0) {
         stageUp();
       }
 
@@ -509,22 +564,18 @@
     lives--;
     updateLivesLabel();
 
-    // Screen Shake heavy feedback on damage
     const card = document.getElementById('game-card');
     card.className = 'game-container shake-heavy';
     setTimeout(() => { card.className = 'game-container'; }, 350);
 
     if (lives > 0) {
       playSound('warn');
-      // Show warning banner
       const banner = document.getElementById('combo-banner');
       banner.innerText = `OUCH! LIFE LOST!`;
       banner.className = 'combo-banner active danger';
-      setTimeout(() => {
-        banner.className = 'combo-banner';
-      }, 1500);
+      setTimeout(() => { banner.className = 'combo-banner'; }, 1500);
 
-      // Soft Reset Snake to safe center starting position to keep them playing
+      // Re-center snake to preserve gameplay
       snake = [
         { x: grid * 5, y: grid * 10 },
         { x: grid * 4, y: grid * 10 }
@@ -539,22 +590,21 @@
   function stageUp() {
     stage++;
     document.getElementById('stage-label').innerText = stage;
-    playSound('levelUp');
 
-    // Speed up formula (caps at extreme 70ms per tick)
-    speed = Math.max(70, 120 - (stage - 1) * 12);
+    // Boom of Joy particles explosion
+    createFireworkExplosion();
+
+    // Speed curve: starts extremely friendly (220ms), gradually reaches fast velocity (70ms) only at Stage 50!
+    // speed = Math.max(70, 220 - (stage - 1) * 3);
+    speed = Math.max(70, baseSpeed - (stage - 1) * 3);
     
-    // Clear and restart interval with new speed
     clearInterval(gameInterval);
     gameInterval = setInterval(update, speed);
 
-    // Level up visual banner
     const banner = document.getElementById('combo-banner');
-    banner.innerText = `STAGE ${stage} CLEARED! LEVEL UP! ⚡`;
+    banner.innerText = `🎉 STAGE ${stage - 1} CLEARED! LEVEL UP! ⚡`;
     banner.className = 'combo-banner active stage-up';
-    setTimeout(() => {
-      banner.className = 'combo-banner';
-    }, 2500);
+    setTimeout(() => { banner.className = 'combo-banner'; }, 3500);
   }
 
   function updateLivesLabel() {
@@ -593,7 +643,6 @@
     document.getElementById('final-score').innerText = score;
     document.getElementById('final-stage').innerText = `Stage ${stage}`;
     
-    // Viral Twitter text generation
     const tweetText = encodeURIComponent(`I reached Stage ${stage} and scored ${score} pts on NeonSnake! Beat me at http://cryptodailytracker.xyz 🐍⚡`);
     document.getElementById('share-link').href = `https://twitter.com/intent/tweet?text=${tweetText}`;
 
@@ -601,7 +650,6 @@
   }
 
   function reviveSnake() {
-    // Revives the snake and resets their hearts to 5 so they keep their score and stage!
     isGameOver = false;
     lives = 5;
     updateLivesLabel();
@@ -619,7 +667,7 @@
     score = 0;
     stage = 1;
     lives = 5;
-    speed = 120;
+    speed = baseSpeed;
     document.getElementById('score-label').innerText = 0;
     document.getElementById('stage-label').innerText = 1;
     updateLivesLabel();

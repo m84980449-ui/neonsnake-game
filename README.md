@@ -16,7 +16,7 @@ Unlike basic competitors' templates which suffer from lack of audio, lack of mob
 3. **Mobile-First Experience**:
    * Features a beautiful transparent on-screen D-pad console overlay so mobile/tablet users can play seamlessly, avoiding the keyboard-only errors of old designs.
 4. **Binance Affiliate monetization loop**:
-   * A clever **"Claim $100 Bonus to Continue/Revive"** call-to-action on the Game Over screen that redirects players to your active Binance affiliate referral link (`897067319`)!
+   * A clever **"Claim $100 Bonus to Continue/Revive"** call-to-action on the Game Over screen that redirects players to your active Binance affiliate referral link (`GRO_28502_04HKT`)!
 
 ---
 
@@ -24,7 +24,7 @@ Unlike basic competitors' templates which suffer from lack of audio, lack of mob
 
 Open [index.html](index.html) and search for the active referral link to replace it with your own custom target:
 ```html
-<a href="https://www.binance.com/activity/referral-entry/CPA?ref=897067319&utm_source=neonsnake" target="_blank" onclick="reviveSnake()" class="revive-btn">
+<a href="https://www.binance.com/referral/earn-together/refer2earn-usdc/claim?hl=en&ref=GRO_28502_04HKT" target="_blank" onclick="reviveSnake()" class="revive-btn">
   ⚡ Continue / Claim $100 Bonus
 </a>
 ```

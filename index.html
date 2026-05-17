@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NeonSnake Premium — Modernized 90s Retro Arcade Game</title>
-  <!-- Outfit Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  <title>AlphaSnake Premium — Neon Alphabet Retro Arcade Game</title>
+  <!-- Outfit & JetBrains Mono Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #04060f;
@@ -102,6 +102,34 @@
     .stage-box span {
       color: var(--warning);
       text-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+    }
+
+    /* Alphabet Progress Bar */
+    .alphabet-tracker {
+      width: 100%;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      letter-spacing: 2px;
+      text-align: center;
+      color: var(--muted);
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .alphabet-tracker span.active {
+      color: var(--accent2);
+      font-weight: 900;
+      text-shadow: 0 0 8px var(--accent2);
+    }
+
+    .alphabet-tracker span.collected {
+      color: var(--success);
+      font-weight: 700;
     }
 
     /* Screen Shake Animation class */
@@ -282,7 +310,7 @@
 
 <div class="game-container" id="game-card">
   <div class="header">
-    <div class="logo">NeonSnake.io</div>
+    <div class="logo">AlphaSnake.io</div>
     <div class="score-board">
       <div class="score-box">Pts: <span id="score-label">0</span></div>
       <div class="score-box">Best: <span id="highscore-label">0</span></div>
@@ -294,7 +322,11 @@
     <div class="stage-box">Stage: <span id="stage-label">1</span></div>
   </div>
 
-  <div class="combo-banner" id="combo-banner">STAGE 1 START! 🚀</div>
+  <div class="alphabet-tracker" id="alphabet-tracker">
+    <!-- Letters will render dynamically -->
+  </div>
+
+  <div class="combo-banner" id="combo-banner">EAT LETTER 'A' TO START! 🚀</div>
 
   <canvas id="game-canvas" width="360" height="360"></canvas>
 
@@ -402,6 +434,10 @@
   let comboCount = 0;
   let comboTimer = null;
 
+  // Alphabet Logic
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let letterIndex = 0;
+
   // Level Clear Fireworks particles ("Boom of Joy")
   let particles = [];
   function createFireworkExplosion() {
@@ -457,6 +493,22 @@
     };
   }
 
+  function updateTrackerUI() {
+    const tracker = document.getElementById('alphabet-tracker');
+    let html = '';
+    for(let i=0; i<alphabet.length; i++) {
+      let char = alphabet[i];
+      if (i < letterIndex) {
+        html += `<span class="collected">${char}</span> `;
+      } else if (i === letterIndex) {
+        html += `<span class="active">${char}</span> `;
+      } else {
+        html += `<span>${char}</span> `;
+      }
+    }
+    tracker.innerHTML = html;
+  }
+
   function draw() {
     // Clear canvas
     ctx.fillStyle = '#080c18';
@@ -469,14 +521,22 @@
       ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
     }
 
-    // Draw Food
+    // Draw food with glowing letter inside!
     const foodColor = stageFoodColors[(stage - 1) % stageFoodColors.length];
     ctx.fillStyle = foodColor;
     ctx.shadowBlur = 15;
     ctx.shadowColor = foodColor;
     ctx.beginPath();
-    ctx.arc(food.x + grid/2, food.y + grid/2, grid/2 - 2, 0, 2*Math.PI);
+    ctx.arc(food.x + grid/2, food.y + grid/2, grid/2 - 1, 0, 2 * Math.PI);
     ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Draw active letter inside food
+    ctx.fillStyle = '#ffffff';
+    ctx.font = "800 11px 'JetBrains Mono', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(alphabet[letterIndex], food.x + grid/2, food.y + grid/2 + 0.5);
 
     // Draw Snake
     snake.forEach((part, index) => {
@@ -490,14 +550,13 @@
     });
     ctx.shadowBlur = 0;
 
-    // Draw Level-Up firework explosion particles
+    // Draw particles
     drawParticles();
   }
 
   function update() {
     if (isGameOver) return;
 
-    // Update fireworks particles frame
     updateParticles();
 
     // Move head
@@ -526,6 +585,14 @@
       score += 10;
       playSound('eat');
       
+      // Update target letter progress
+      letterIndex++;
+      
+      // Screen shake feedback
+      const card = document.getElementById('game-card');
+      card.className = 'game-container shake';
+      setTimeout(() => { card.className = 'game-container'; }, 200);
+
       // Dopamine combo popups
       comboCount++;
       clearTimeout(comboTimer);
@@ -534,7 +601,12 @@
         banner.innerText = `FAST COMBO x${comboCount}!`;
         banner.className = 'combo-banner active';
         score += 5; // bonus points
+      } else {
+        const banner = document.getElementById('combo-banner');
+        banner.innerText = `EATEN '${alphabet[letterIndex-1]}'! NEXT: '${alphabet[letterIndex] || 'STAGE CLEAR!'}'`;
+        banner.className = 'combo-banner active';
       }
+      
       comboTimer = setTimeout(() => {
         comboCount = 0;
         document.getElementById('combo-banner').className = 'combo-banner';
@@ -542,16 +614,12 @@
 
       document.getElementById('score-label').innerText = score;
       
-      // STAGE UP MECHANICS: 1000 points per stage (100 apples)
-      if (score > 0 && score % 1000 === 0) {
+      // ALPHABET CLEAR MECHANICS: Eating 'Z' (index 26) triggers Stage Up!
+      if (letterIndex >= 26) {
         stageUp();
       }
 
-      // Screen shake feedback
-      const card = document.getElementById('game-card');
-      card.className = 'game-container shake';
-      setTimeout(() => { card.className = 'game-container'; }, 200);
-
+      updateTrackerUI();
       food = getRandomFoodPos();
     } else {
       snake.pop();
@@ -589,13 +657,13 @@
 
   function stageUp() {
     stage++;
+    letterIndex = 0;
     document.getElementById('stage-label').innerText = stage;
 
-    // Boom of Joy particles explosion
+    // Boom of Joy fireworks explosion!
     createFireworkExplosion();
 
     // Speed curve: starts extremely friendly (220ms), gradually reaches fast velocity (70ms) only at Stage 50!
-    // speed = Math.max(70, 220 - (stage - 1) * 3);
     speed = Math.max(70, baseSpeed - (stage - 1) * 3);
     
     clearInterval(gameInterval);
@@ -643,7 +711,7 @@
     document.getElementById('final-score').innerText = score;
     document.getElementById('final-stage').innerText = `Stage ${stage}`;
     
-    const tweetText = encodeURIComponent(`I reached Stage ${stage} and scored ${score} pts on NeonSnake! Beat me at http://cryptodailytracker.xyz 🐍⚡`);
+    const tweetText = encodeURIComponent(`I completed the Alphabet on AlphaSnake and reached Stage ${stage}! Beat me at http://cryptodailytracker.xyz 🐍🔤`);
     document.getElementById('share-link').href = `https://twitter.com/intent/tweet?text=${tweetText}`;
 
     document.getElementById('gameover-modal').className = 'modal active';
@@ -667,10 +735,12 @@
     score = 0;
     stage = 1;
     lives = 5;
+    letterIndex = 0;
     speed = baseSpeed;
     document.getElementById('score-label').innerText = 0;
     document.getElementById('stage-label').innerText = 1;
     updateLivesLabel();
+    updateTrackerUI();
     snake = [
       { x: grid * 5, y: grid * 10 },
       { x: grid * 4, y: grid * 10 }
@@ -683,6 +753,7 @@
     gameInterval = setInterval(update, speed);
   }
 
+  updateTrackerUI();
   gameInterval = setInterval(update, speed);
 </script>
 </body>

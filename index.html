@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeonSnake Premium — Modernized 90s Retro Arcade Game</title>
+  <!-- Outfit Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #04060f;
+      --card: rgba(15, 23, 42, 0.6);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #ff007f;
+      --accent-glow: rgba(255, 0, 127, 0.2);
+      --accent2: #00f0ff;
+      --text: #ffffff;
+      --muted: #94a3b8;
+      --success: #00ff88;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(255,0,127,0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(0,240,255,0.05) 0%, transparent 40%);
+    }
+
+    .game-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 1.5rem;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      max-width: 440px;
+      width: 100%;
+    }
+
+    .header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.75rem;
+    }
+
+    .logo {
+      font-weight: 900;
+      font-size: 1.25rem;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .score-board {
+      display: flex;
+      gap: 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .score-box span {
+      color: var(--accent2);
+    }
+
+    /* Screen Shake Animation class */
+    .shake {
+      animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    #game-canvas {
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      background: #080c18;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+      max-width: 100%;
+    }
+
+    /* Dopamine Multiplier Popups */
+    .combo-banner {
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: var(--success);
+      height: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    .combo-banner.active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Visual mobile-first controls */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      grid-template-rows: repeat(2, 50px);
+      gap: 8px;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+
+    .dpad-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 1.25rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .dpad-btn:active {
+      background: rgba(255,255,255,0.15);
+      border-color: var(--accent2);
+      transform: scale(0.95);
+    }
+
+    /* Popups (TikTok/Facebook Viral conversion mechanics) */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+      padding: 1.5rem;
+    }
+
+    .modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: #0c1020;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 2.25rem;
+      text-align: center;
+      max-width: 380px;
+      width: 100%;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .modal h2 {
+      font-size: 1.8rem;
+      font-weight: 900;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .share-btn {
+      background: #1da1f2; /* Twitter Blue */
+      color: #fff;
+      border: none;
+      padding: 0.85rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      transition: transform 0.2s;
+    }
+
+    .share-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .revive-btn {
+      background: linear-gradient(135deg, var(--success), #00b894);
+      color: #000;
+      border: none;
+      padding: 0.9rem 1.5rem;
+      border-radius: 12px;
+      font-weight: 900;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 5px 15px rgba(0, 255, 136, 0.25);
+    }
+
+    .revive-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 255, 136, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+<div class="game-container" id="game-card">
+  <div class="header">
+    <div class="logo">NeonSnake.io</div>
+    <div class="score-board">
+      <div class="score-box">Pts: <span id="score-label">0</span></div>
+      <div class="score-box">Best: <span id="highscore-label">0</span></div>
+    </div>
+  </div>
+
+  <div class="combo-banner" id="combo-banner">MEGA COMBO x3!</div>
+
+  <canvas id="game-canvas" width="360" height="360"></canvas>
+
+  <!-- Mobile On-screen D-pad controls (Highly requested fix over desktop-only competitors!) -->
+  <div class="controls-grid">
+    <div></div>
+    <button class="dpad-btn" onclick="changeDir('UP')">▲</button>
+    <div></div>
+    <button class="dpad-btn" onclick="changeDir('LEFT')">◀</button>
+    <button class="dpad-btn" onclick="changeDir('DOWN')">▼</button>
+    <button class="dpad-btn" onclick="changeDir('RIGHT')">▶</button>
+  </div>
+</div>
+
+<!-- Game Over Modal (Viral Marketing & Referral Loop) -->
+<div class="modal" id="gameover-modal">
+  <div class="modal-content">
+    <h2>Game Over!</h2>
+    <p style="color:var(--muted)">You scored <span id="final-score" style="color:#fff; font-weight:700;">0</span> points!</p>
+    
+    <!-- Facebook & Twitter Viral Loop Button -->
+    <a href="#" id="share-link" target="_blank" class="share-btn">
+      🐦 Share & Brag on Twitter
+    </a>
+
+    <!-- Binance Affiliate monetisation loop (TikTok dopamine booster) -->
+    <a href="https://www.binance.com/activity/referral-entry/CPA?ref=897067319&utm_source=neonsnake" target="_blank" onclick="reviveSnake()" class="revive-btn">
+      ⚡ Continue / Claim $100 Bonus
+    </a>
+    
+    <button onclick="restartGame()" style="background:transparent; border:none; color:var(--muted); font-size:0.85rem; text-decoration:underline; cursor:pointer;">
+      Restart from scratch
+    </button>
+  </div>
+</div>
+
+<script>
+  // Chiptune Audio Synth (dopamine sound feedback without assets!)
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function playSound(type) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    if (type === 'eat') {
+      osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1040, audioCtx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    } else if (type === 'die') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(80, audioCtx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.45);
+    }
+  }
+
+  const canvas = document.getElementById('game-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const grid = 18;
+  let score = 0;
+  let highscore = parseInt(localStorage.getItem('snake_highscore') || '0');
+  document.getElementById('highscore-label').innerText = highscore;
+
+  let snake = [
+    { x: grid * 5, y: grid * 10 },
+    { x: grid * 4, y: grid * 10 }
+  ];
+  let dx = grid;
+  let dy = 0;
+  let food = getRandomFoodPos();
+  let gameInterval = null;
+  let isGameOver = false;
+  let comboCount = 0;
+  let comboTimer = null;
+
+  function getRandomFoodPos() {
+    const maxX = (canvas.width / grid) - 1;
+    const maxY = (canvas.height / grid) - 1;
+    return {
+      x: Math.floor(Math.random() * maxX + 1) * grid,
+      y: Math.floor(Math.random() * maxY + 1) * grid
+    };
+  }
+
+  function draw() {
+    // Clear canvas
+    ctx.fillStyle = '#080c18';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw grid glow accent lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.015)';
+    for(let i=0; i<canvas.width; i+=grid) {
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+    }
+
+    // Draw neon glowing Food
+    ctx.fillStyle = '#ff007f';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#ff007f';
+    ctx.beginPath();
+    ctx.arc(food.x + grid/2, food.y + grid/2, grid/2 - 2, 0, 2*Math.PI);
+    ctx.fill();
+
+    // Draw Snake
+    snake.forEach((part, index) => {
+      ctx.fillStyle = index === 0 ? '#00f0ff' : '#00b8d4';
+      ctx.shadowBlur = index === 0 ? 10 : 0;
+      ctx.shadowColor = '#00f0ff';
+      
+      // Rounded snake block
+      ctx.beginPath();
+      ctx.roundRect(part.x + 1, part.y + 1, grid - 2, grid - 2, 6);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0; // reset shadow
+  }
+
+  function update() {
+    if (isGameOver) return;
+
+    // Move head
+    const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+    
+    // Boundary collision
+    if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+      triggerGameOver();
+      return;
+    }
+
+    // Self collision
+    for (let i = 0; i < snake.length; i++) {
+      if (snake[i].x === head.x && snake[i].y === head.y) {
+        triggerGameOver();
+        return;
+      }
+    }
+
+    snake.unshift(head);
+
+    // Eat food logic
+    if (head.x === food.x && head.y === food.y) {
+      score += 10;
+      playSound('eat');
+      
+      // Dopamine combo popups
+      comboCount++;
+      clearTimeout(comboTimer);
+      if (comboCount >= 3) {
+        const banner = document.getElementById('combo-banner');
+        banner.innerText = `FAST COMBO x${comboCount}!`;
+        banner.className = 'combo-banner active';
+        score += 5; // bonus pts
+      }
+      comboTimer = setTimeout(() => {
+        comboCount = 0;
+        document.getElementById('combo-banner').className = 'combo-banner';
+      }, 3000);
+
+      document.getElementById('score-label').innerText = score;
+      
+      // Screen shake feedback
+      const card = document.getElementById('game-card');
+      card.className = 'game-container shake';
+      setTimeout(() => { card.className = 'game-container'; }, 200);
+
+      food = getRandomFoodPos();
+    } else {
+      snake.pop();
+    }
+
+    draw();
+  }
+
+  function changeDir(dir) {
+    if (dir === 'UP' && dy === 0) { dx = 0; dy = -grid; }
+    else if (dir === 'DOWN' && dy === 0) { dx = 0; dy = grid; }
+    else if (dir === 'LEFT' && dx === 0) { dx = -grid; dy = 0; }
+    else if (dir === 'RIGHT' && dx === 0) { dx = grid; dy = 0; }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowUp' || e.key === 'z') changeDir('UP');
+    else if (e.key === 'ArrowDown' || e.key === 's') changeDir('DOWN');
+    else if (e.key === 'ArrowLeft' || e.key === 'q') changeDir('LEFT');
+    else if (e.key === 'ArrowRight' || e.key === 'd') changeDir('RIGHT');
+  });
+
+  function triggerGameOver() {
+    isGameOver = true;
+    clearInterval(gameInterval);
+    playSound('die');
+
+    if (score > highscore) {
+      highscore = score;
+      localStorage.setItem('snake_highscore', highscore);
+      document.getElementById('highscore-label').innerText = highscore;
+    }
+
+    document.getElementById('final-score').innerText = score;
+    
+    // Viral Twitter text generation
+    const tweetText = encodeURIComponent(`I scored ${score} pts on NeonSnake! Beat my score at http://cryptodailytracker.xyz 🐍🚀`);
+    document.getElementById('share-link').href = `https://twitter.com/intent/tweet?text=${tweetText}`;
+
+    document.getElementById('gameover-modal').className = 'modal active';
+  }
+
+  function reviveSnake() {
+    // TikTok dopamine continuation loop - Revives the snake and lets them keep their score!
+    isGameOver = false;
+    // reset position slightly away from boundary
+    snake = [
+      { x: grid * 5, y: grid * 10 },
+      { x: grid * 4, y: grid * 10 }
+    ];
+    dx = grid; dy = 0;
+    document.getElementById('gameover-modal').className = 'modal';
+    gameInterval = setInterval(update, 120);
+  }
+
+  function restartGame() {
+    score = 0;
+    document.getElementById('score-label').innerText = 0;
+    snake = [
+      { x: grid * 5, y: grid * 10 },
+      { x: grid * 4, y: grid * 10 }
+    ];
+    dx = grid; dy = 0;
+    isGameOver = false;
+    document.getElementById('gameover-modal').className = 'modal';
+    draw();
+    clearInterval(gameInterval);
+    gameInterval = setInterval(update, 120);
+  }
+
+  gameInterval = setInterval(update, 120);
+</script>
+</body>
+</html>
